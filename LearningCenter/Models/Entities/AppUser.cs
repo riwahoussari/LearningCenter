@@ -1,6 +1,6 @@
 ﻿using Microsoft.AspNetCore.Identity;
 
-namespace LearningCenter.Models
+namespace LearningCenter.Models.Entities
 {
     public class AppUser : IdentityUser
     {
@@ -10,6 +10,10 @@ namespace LearningCenter.Models
         public string? LastName { get; set; }
         public DateTimeOffset CreatedAt { get; set; } = DateTimeOffset.UtcNow;
 
+
+        // Profile Navigation Links
+        public StudentProfile StudentProfile { get; set; }
+        public TutorProfile TutorProfile { get; set; }
 
     }
 }

@@ -1,5 +1,7 @@
 using LearningCenter.Data;
-using LearningCenter.Models;
+using LearningCenter.Models.Constants;
+using LearningCenter.Models.Entities;
+using LearningCenter.Models.Services;
 using LearningCenter.Services;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Identity;
@@ -19,6 +21,12 @@ builder.Services.AddSwaggerGen();
 // Services
 // Email Sender
 builder.Services.AddScoped<IEmailSender, ConsoleEmailSender>();
+// User Profile Services
+builder.Services.AddScoped<ITutorService, TutorService>();
+builder.Services.AddScoped<IStudentService, StudentService>();
+// seeding services
+builder.Services.AddScoped<RoleSeedService>();
+builder.Services.AddScoped<AdminSeedService>();
 
 // Db Context
 builder.Services.AddDbContext<AppDbContext>(options =>
@@ -66,6 +74,26 @@ builder.Services.AddAuthentication(options =>
 builder.Services.AddControllers();
 
 var app = builder.Build();
+
+// Seed roles and admin user on startup
+using (var scope = app.Services.CreateScope())
+{
+    try
+    {
+        // Seed roles first
+        var roleSeeder = scope.ServiceProvider.GetRequiredService<RoleSeedService>();
+        await roleSeeder.SeedRolesAsync();
+
+        // Then seed admin user
+        var adminSeeder = scope.ServiceProvider.GetRequiredService<AdminSeedService>();
+        await adminSeeder.SeedAdminAsync();
+    }
+    catch (Exception ex)
+    {
+        var logger = scope.ServiceProvider.GetRequiredService<ILogger<Program>>();
+        logger.LogError(ex, "An error occurred while seeding data");
+    }
+}
 
 // Configure the HTTP request pipeline.
 if (app.Environment.IsDevelopment())

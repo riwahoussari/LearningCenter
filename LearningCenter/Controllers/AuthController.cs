@@ -1,8 +1,14 @@
-﻿using LearningCenter.Models;
+﻿using LearningCenter.Data;
+using LearningCenter.Models.Constants;
+using LearningCenter.Models.Entities;
+using LearningCenter.Models.Services;
 using LearningCenter.Services;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
+using System.Data;
 using System.IdentityModel.Tokens.Jwt;
 using System.Security.Claims;
 using System.Text;
@@ -17,22 +23,28 @@ namespace LearningCenter.Controllers
         private readonly SignInManager<AppUser> _signInManager;
         private readonly IConfiguration _config;
         private readonly IEmailSender _emailSender;
+        private readonly ITutorService _tutorService;
+        private readonly IStudentService _studentService;
 
         public AuthController(
-            UserManager<AppUser> userManager, 
-            SignInManager<AppUser> signInManager, 
+            UserManager<AppUser> userManager,
+            SignInManager<AppUser> signInManager,
             IConfiguration config,
-            IEmailSender emailSender
+            IEmailSender emailSender,
+            ITutorService tutorService,
+            IStudentService studentService
         )
         {
             _userManager = userManager;
             _signInManager = signInManager;
             _config = config;
             _emailSender = emailSender;
+            _tutorService = tutorService;
+            _studentService = studentService;
         }
 
-        [HttpPost("register")]
-        public async Task<IActionResult> Register([FromBody] RegisterDto dto)
+        [HttpPost("register-student")]
+        public async Task<IActionResult> Register([FromBody] RegisterStudentDto dto)
         {
             var user = new AppUser
             {
@@ -44,13 +56,67 @@ namespace LearningCenter.Controllers
 
             var result = await _userManager.CreateAsync(user, dto.Password);
 
-            if (!result.Succeeded)
-                return BadRequest(result.Errors);
+            if (!result.Succeeded) return BadRequest(result.Errors);
+
+            await _userManager.AddToRoleAsync(user, RoleConstants.Student);
+
+            // create and link student profile
+            StudentProfile studentProfile = await _studentService.CreateStudentProfile(user.Id, dto.Major);
+            user.StudentProfile = studentProfile;
 
             await SendEmailConfirmationEmail(user);
 
             return Ok("User registered successfully. Please check your email to confirm your account.");
         }
+
+        [HttpPost("register-tutor")]
+        public async Task<IActionResult> RegisterTutor(RegisterTutorDto dto)
+        {
+            var user = new AppUser
+            {
+                UserName = dto.Email,
+                Email = dto.Email,
+                FirstName = dto.FirstName,
+                LastName = dto.LastName
+            };
+
+            var result = await _userManager.CreateAsync(user, dto.Password);
+            if (!result.Succeeded) return BadRequest(result.Errors);
+
+            await _userManager.AddToRoleAsync(user, RoleConstants.Tutor);
+
+            // create and link Tutor Profile
+            TutorProfile tutorProfile = await _tutorService.CreateTutorProfile(user.Id, dto.Bio, dto.Expertise);
+            user.TutorProfile = tutorProfile;
+
+            await SendEmailConfirmationEmail(user);
+
+            return Ok("Tutor registered. Please confirm your email. An admin must also approve your account before login.");
+        }
+
+        // only admins can register a new admin
+        //[Authorize(Roles = RoleConstants.Admin)]
+        [HttpPost("register-admin")]
+        public async Task<IActionResult> RegisterAdmin(RegisterDto dto)
+        {
+            var user = new AppUser
+            {
+                UserName = dto.Email,
+                Email = dto.Email,
+                FirstName = dto.FirstName,
+                LastName = dto.LastName
+            };
+
+            var result = await _userManager.CreateAsync(user, dto.Password);
+            if (!result.Succeeded) return BadRequest(result.Errors);
+
+            await _userManager.AddToRoleAsync(user, RoleConstants.Admin);
+
+            await SendEmailConfirmationEmail(user);
+
+            return Ok("New Admin registered. Please let them confirm their email.");
+        }
+
 
         [HttpGet("confirm-email")]
         public async Task<IActionResult> ConfirmEmail(string userId, string token)
@@ -93,12 +159,20 @@ namespace LearningCenter.Controllers
             if (!await _userManager.IsEmailConfirmedAsync(user))
                 return Unauthorized("Email not confirmed. Please check your inbox.");
 
+            // Tutor restriction (don't login if account not approved by admin)
+            if (await _userManager.IsInRoleAsync(user, RoleConstants.Tutor))
+            {
+                var tutorProfile = await _tutorService.GetTutorByUserIdAsync(user.Id);
+                if (tutorProfile == null || !tutorProfile.IsApproved)
+                    return Unauthorized("Tutor account pending approval by an administrator.");
+            }
+
             // now use SignInManager for other security features
             var result = await _signInManager.CheckPasswordSignInAsync(user, dto.Password, false);
             if (!result.Succeeded) return Unauthorized("Invalid credentials");
 
             
-            var token = GenerateJwtToken(user);
+            var token = await GenerateJwtToken(user);
             return Ok(new { Token = token });
         }
 
@@ -139,21 +213,26 @@ namespace LearningCenter.Controllers
             return BadRequest(result.Errors);
         }
 
+
+
         // Helper functions
-        private string GenerateJwtToken(AppUser user)
+        private async Task<string> GenerateJwtToken(AppUser user)
         {
             var jwtSettings = _config.GetSection("Jwt");
             var key = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(jwtSettings["Key"]!));
 
             var creds = new SigningCredentials(key, SecurityAlgorithms.HmacSha256);
 
-            var claims = new[]
+            var claims = new List<Claim>()
             {
                 new Claim(JwtRegisteredClaimNames.Sub, user.Id),
                 new Claim(JwtRegisteredClaimNames.Email, user.Email),
                 new Claim("FirstName", user.FirstName),
                 new Claim("LastName", user.LastName)
             };
+
+            var roles = await _userManager.GetRolesAsync(user);
+            claims.AddRange(roles.Select(r => new Claim(ClaimTypes.Role, r)));
 
             var token = new JwtSecurityToken(
                 issuer: jwtSettings["Issuer"],
@@ -188,11 +267,8 @@ namespace LearningCenter.Controllers
             var token = await _userManager.GeneratePasswordResetTokenAsync(user);
 
             // Build password reset link
-            var resetLink = Url.Action(
-                nameof(ResetPassword), 
-                "Auth", 
-                 new { email = user.Email, token }, 
-                 Request.Scheme);
+            var resetLink = $"{Request.Scheme}://{Request.Host}/reset-password?email={Uri.EscapeDataString(user.Email)}&token={Uri.EscapeDataString(token)}";
+
 
             await _emailSender.SendEmailAsync(user.Email, "Reset Your Password", $"Reset your password by clicking this link (this will take a page with a reset password form but that doesn't exist right now so just copy the token and use it in the reset-password post request): \n {resetLink} \n\n Token: {token}");
         }
@@ -206,6 +282,17 @@ namespace LearningCenter.Controllers
         public string LastName { get; set; }
         public string Email { get; set; }
         public string Password { get; set; }
+    }
+
+    public class RegisterStudentDto : RegisterDto
+    {
+        public string Major { get; set; }
+    }
+
+    public class RegisterTutorDto : RegisterDto
+    {
+        public string Expertise { get; set; }
+        public string Bio { get; set; }
     }
 
     public class LoginDto
