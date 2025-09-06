@@ -67,9 +67,8 @@ namespace LearningCenter.Controllers
 
             await _userManager.AddToRoleAsync(user, RoleConstants.Student);
 
-            // create and link student profile
+            // create student profile
             StudentProfile studentProfile = await _studentService.CreateStudentProfile(user.Id, dto.Major);
-            user.StudentProfile = studentProfile;
 
             await SendEmailConfirmationEmail(user);
 
@@ -92,9 +91,8 @@ namespace LearningCenter.Controllers
 
             await _userManager.AddToRoleAsync(user, RoleConstants.Tutor);
 
-            // create and link Tutor Profile
+            // create Tutor Profile
             TutorProfile tutorProfile = await _tutorService.CreateTutorProfile(user.Id, dto.Bio, dto.Expertise);
-            user.TutorProfile = tutorProfile;
 
             await SendEmailConfirmationEmail(user);
 
