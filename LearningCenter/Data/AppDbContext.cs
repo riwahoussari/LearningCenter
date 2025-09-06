@@ -1,4 +1,5 @@
-﻿using Microsoft.EntityFrameworkCore;
+﻿using Microsoft.AspNetCore.Identity;
+using Microsoft.EntityFrameworkCore;
 
 namespace LearningCenter.Data
 {
@@ -7,5 +8,6 @@ namespace LearningCenter.Data
         public AppDbContext(DbContextOptions<AppDbContext> options) : base(options)
         { }
 
+        public DbSet<IdentityUser> Users {  get; set; }
     }
 }
