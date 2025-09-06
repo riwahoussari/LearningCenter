@@ -47,7 +47,7 @@ namespace LearningCenter.Controllers
             if (!result.Succeeded)
                 return BadRequest(result.Errors);
 
-            SendEmailConfirmationEmail(user);
+            await SendEmailConfirmationEmail(user);
 
             return Ok("User registered successfully. Please check your email to confirm your account.");
         }
@@ -71,7 +71,7 @@ namespace LearningCenter.Controllers
         {
             var user = await _userManager.FindByEmailAsync(dto.Email);
             if (user != null && await _userManager.IsEmailConfirmedAsync(user) == false)
-                SendEmailConfirmationEmail(user);
+                await SendEmailConfirmationEmail(user);
 
             // return generic message so attackers can’t know if an email is registered
             return Ok("If this email is not confirmed, we sent a new confirmation link");
@@ -139,6 +139,7 @@ namespace LearningCenter.Controllers
             return BadRequest(result.Errors);
         }
 
+        // Helper functions
         private string GenerateJwtToken(AppUser user)
         {
             var jwtSettings = _config.GetSection("Jwt");
@@ -165,7 +166,7 @@ namespace LearningCenter.Controllers
             return new JwtSecurityTokenHandler().WriteToken(token);
         }
 
-        private async void SendEmailConfirmationEmail(AppUser user)
+        private async Task SendEmailConfirmationEmail(AppUser user)
         {
             // Generate email confirmation token
             var token = await _userManager.GenerateEmailConfirmationTokenAsync(user);
@@ -193,12 +194,12 @@ namespace LearningCenter.Controllers
                  new { email = user.Email, token }, 
                  Request.Scheme);
 
-            await _emailSender.SendEmailAsync(user.Email, "Reset Your Password", $"Reset your password by clicking this link: {resetLink}");
+            await _emailSender.SendEmailAsync(user.Email, "Reset Your Password", $"Reset your password by clicking this link (this will take a page with a reset password form but that doesn't exist right now so just copy the token and use it in the reset-password post request): \n {resetLink} \n\n Token: {token}");
         }
 
     }
 
-
+    // DTOs
     public class RegisterDto
     {
         public string FirstName { get; set; }
