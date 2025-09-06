@@ -1,5 +1,4 @@
 using LearningCenter.Data;
-using LearningCenter.Models.Constants;
 using LearningCenter.Models.Entities;
 using LearningCenter.Models.Services;
 using LearningCenter.Services;
@@ -9,8 +8,12 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
 using System.Text;
 
+DotNetEnv.Env.Load();
+
+
 var builder = WebApplication.CreateBuilder(args);
 
+Console.WriteLine("${DB_PASSWORD} : " + builder.Configuration.GetConnectionString("WebApiDb"));
 // Add services to the container.
 
 builder.Services.AddControllers();
