@@ -1,4 +1,5 @@
 ﻿using LearningCenter.Models.Entities;
+using LearningCenter.Models.Entities.Auth;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Identity.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore;
@@ -13,10 +14,15 @@ namespace LearningCenter.Data
         public DbSet<AppUser> Users {  get; set; }
         public DbSet<StudentProfile> StudentProfiles { get; set; }
         public DbSet<TutorProfile> TutorProfiles { get; set; }
+        public DbSet<RefreshToken> RefreshTokens { get; set; }
+
 
         protected override void OnModelCreating(ModelBuilder b)
         {
             base.OnModelCreating(b);
+
+            // Move Refresh Token entity into "auth" schema
+            b.Entity<RefreshToken>().ToTable("RefreshTokens", "auth");
 
             // Move Identity Framework tables into "auth" schema
             b.HasDefaultSchema("lms");

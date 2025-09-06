@@ -1,16 +1,19 @@
 ﻿using LearningCenter.Data;
 using LearningCenter.Models.Constants;
 using LearningCenter.Models.Entities;
+using LearningCenter.Models.Entities.Auth;
 using LearningCenter.Models.Services;
 using LearningCenter.Services;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Identity;
+using Microsoft.AspNetCore.Identity.Data;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
 using System.Data;
 using System.IdentityModel.Tokens.Jwt;
 using System.Security.Claims;
+using System.Security.Cryptography;
 using System.Text;
 
 namespace LearningCenter.Controllers
@@ -25,6 +28,7 @@ namespace LearningCenter.Controllers
         private readonly IEmailSender _emailSender;
         private readonly ITutorService _tutorService;
         private readonly IStudentService _studentService;
+        private readonly IRefreshTokenService _refreshTokenService;
 
         public AuthController(
             UserManager<AppUser> userManager,
@@ -32,7 +36,9 @@ namespace LearningCenter.Controllers
             IConfiguration config,
             IEmailSender emailSender,
             ITutorService tutorService,
-            IStudentService studentService
+            IStudentService studentService,
+            IRefreshTokenService refreshTokenService
+
         )
         {
             _userManager = userManager;
@@ -41,6 +47,7 @@ namespace LearningCenter.Controllers
             _emailSender = emailSender;
             _tutorService = tutorService;
             _studentService = studentService;
+            _refreshTokenService = refreshTokenService;
         }
 
         [HttpPost("register-student")]
@@ -95,7 +102,7 @@ namespace LearningCenter.Controllers
         }
 
         // only admins can register a new admin
-        //[Authorize(Roles = RoleConstants.Admin)]
+        [Authorize(Roles = RoleConstants.Admin)]
         [HttpPost("register-admin")]
         public async Task<IActionResult> RegisterAdmin(RegisterDto dto)
         {
@@ -171,17 +178,76 @@ namespace LearningCenter.Controllers
             var result = await _signInManager.CheckPasswordSignInAsync(user, dto.Password, false);
             if (!result.Succeeded) return Unauthorized("Invalid credentials");
 
-            
-            var token = await GenerateJwtToken(user);
-            return Ok(new { Token = token });
+
+            var jwtToken = await GenerateJwtToken(user);
+            RefreshToken refreshToken = await _refreshTokenService.CreateAsync(user);
+
+            // Get user roles for response
+            var roles = await _userManager.GetRolesAsync(user);
+
+            return Ok(new
+            {
+                AccessToken = jwtToken,
+                RefreshToken = refreshToken.Token, // Only return the token string
+                ExpiresIn = Convert.ToDouble(_config.GetSection("Jwt")["ExpireMinutes"]) * 60, // access token expiry in seconds
+                User = new
+                {
+                    id = user.Id,
+                    firstName = user.FirstName,
+                    lastName = user.LastName,
+                    email = user.Email,
+                    role = roles.FirstOrDefault()
+                }
+            });
         }
 
-        [HttpPost("logout")]
-        public async Task<IActionResult> Logout()
+        [HttpPost("refresh")]
+        public async Task<IActionResult> Refresh([FromBody] RefreshRequest dto)
         {
-            await _signInManager.SignOutAsync();
-            return Ok("User logged out");
+            var storedToken = await _refreshTokenService.GetAsync(dto.RefreshToken, true);
+
+            if (storedToken == null || !storedToken.IsActive)
+                return Unauthorized("Invalid refresh token");
+
+            var newJwt = await GenerateJwtToken(storedToken.User);
+
+            // rotate token (invalidate old, issue new)
+            _refreshTokenService.RevokeAsync(storedToken.Token);
+            RefreshToken newRefresh = await _refreshTokenService.CreateAsync(storedToken.User);
+
+            // Get user roles for response
+            var roles = await _userManager.GetRolesAsync(storedToken.User);
+
+            return Ok(new
+            {
+                AccessToken = newJwt,
+                RefreshToken = newRefresh.Token, // Only return the token string
+                ExpiresIn = Convert.ToDouble(_config.GetSection("Jwt")["ExpireMinutes"]) * 60, // access token expiry in seconds
+                User = new
+                {
+                    id = storedToken.User.Id,
+                    firstName = storedToken.User.FirstName,
+                    lastName = storedToken.User.LastName,
+                    email = storedToken.User.Email,
+                    role = roles.FirstOrDefault()
+                }
+            });
         }
+
+        [Authorize]
+        [HttpPost("revoke")]
+        public async Task<IActionResult> Revoke([FromBody] RefreshRequest dto)
+        {
+            RefreshToken storedToken = await _refreshTokenService.GetAsync(dto.RefreshToken, false);
+
+            if (storedToken == null || !storedToken.IsActive)
+                return NotFound("Token not found");
+
+            _refreshTokenService.RevokeAsync(storedToken.Token);
+
+            return Ok("Refresh token revoked");
+        }
+
 
         [HttpPost("forgot-password")]
         public async Task<IActionResult> ForgotPassword([FromBody] ForgotPasswordDto dto)

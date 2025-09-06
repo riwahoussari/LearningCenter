@@ -27,6 +27,9 @@ builder.Services.AddScoped<IStudentService, StudentService>();
 // seeding services
 builder.Services.AddScoped<RoleSeedService>();
 builder.Services.AddScoped<AdminSeedService>();
+// Refresh Token Service
+builder.Services.AddScoped<IRefreshTokenService, RefreshTokenService>();
+
 
 // Db Context
 builder.Services.AddDbContext<AppDbContext>(options =>
