@@ -35,7 +35,7 @@ namespace LearningCenter.Migrations
                         .IsConcurrencyToken()
                         .HasColumnType("text");
 
-                    b.Property<DateTimeOffset>("CreatedAt")
+                    b.Property<DateTimeOffset>("DateJoined")
                         .HasColumnType("timestamp with time zone");
 
                     b.Property<string>("Email")

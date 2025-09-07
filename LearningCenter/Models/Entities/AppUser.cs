@@ -9,7 +9,7 @@ namespace LearningCenter.Models.Entities
         // Common profile info
         public string? FirstName { get; set; }
         public string? LastName { get; set; }
-        public DateTimeOffset CreatedAt { get; set; } = DateTimeOffset.UtcNow;
+        public DateTimeOffset DateJoined { get; set; } = DateTimeOffset.UtcNow;
 
     }
 }

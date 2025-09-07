@@ -12,6 +12,7 @@ namespace LearningCenter.Models.Services
         Task<TutorProfile> GetTutorByUserIdAsync(string userId);
         Task ApproveTutorAsync(string tutorUserId);
         Task<List<TutorDto>> GetAllTutors();
+        Task UpdateTutorAsync(TutorProfile profile);
     }
 
     public class TutorService : ITutorService
@@ -33,6 +34,13 @@ namespace LearningCenter.Models.Services
 
             return tutorProfile;
         }
+
+        public async Task UpdateTutorAsync(TutorProfile profile)
+        {
+            _db.TutorProfiles.Update(profile);
+            await _db.SaveChangesAsync();
+        }
+
         public async Task<TutorProfile> GetTutorByUserIdAsync(string userId)
         {
             return await _db.TutorProfiles.FirstOrDefaultAsync(t => t.UserId == userId);
@@ -59,7 +67,7 @@ namespace LearningCenter.Models.Services
                 FirstName = p.User.FirstName,
                 LastName = p.User.LastName,
                 Email = p.User.Email,
-                CreatedAt = p.User.CreatedAt,
+                DateJoined = p.User.DateJoined,
                 Role = RoleConstants.Tutor
             }).ToListAsync();
         }

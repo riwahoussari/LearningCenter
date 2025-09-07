@@ -9,6 +9,7 @@ namespace LearningCenter.Models.Services
     public interface IStudentService
     {
         Task<StudentProfile> CreateStudentProfile(string userId, string major);
+        Task UpdateStudentAsync(StudentProfile profile);
         Task<StudentProfile> GetStudentByUserIdAsync(string userId);
         Task<List<StudentDto>> GetAllStudents();
     }
@@ -35,6 +36,12 @@ namespace LearningCenter.Models.Services
             return studentProfile;
         }
 
+        public async Task UpdateStudentAsync(StudentProfile profile)
+        {
+            _db.StudentProfiles.Update(profile);
+            await _db.SaveChangesAsync();
+        }
+
         public async Task<StudentProfile> GetStudentByUserIdAsync(string userId)
         {
             return await _db.StudentProfiles.FirstOrDefaultAsync(t => t.UserId == userId);
@@ -50,7 +57,7 @@ namespace LearningCenter.Models.Services
                 FirstName = p.User.FirstName,
                 LastName = p.User.LastName,
                 Email = p.User.Email,
-                CreatedAt = p.User.CreatedAt,
+                DateJoined = p.User.DateJoined,
                 Role = RoleConstants.Student
             }).ToListAsync();
         }

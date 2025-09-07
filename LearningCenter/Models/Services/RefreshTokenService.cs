@@ -8,7 +8,8 @@ namespace LearningCenter.Models.Services
 {
     public interface IRefreshTokenService
     {
-        Task<RefreshToken> CreateAsync(AppUser user);
+        Task<RefreshToken> 
+            CreateAsync(AppUser user);
         Task<RefreshToken?> GetAsync(string token, bool includeUser = false);
         Task RevokeAsync(string token);
     }

@@ -12,8 +12,8 @@ using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 namespace LearningCenter.Migrations
 {
     [DbContext(typeof(AppDbContext))]
-    [Migration("20250906155507_add refresh token")]
-    partial class addrefreshtoken
+    [Migration("20250907102320_change field name from createdat to datejoined")]
+    partial class changefieldnamefromcreatedattodatejoined
     {
         /// <inheritdoc />
         protected override void BuildTargetModel(ModelBuilder modelBuilder)
@@ -38,7 +38,7 @@ namespace LearningCenter.Migrations
                         .IsConcurrencyToken()
                         .HasColumnType("text");
 
-                    b.Property<DateTimeOffset>("CreatedAt")
+                    b.Property<DateTimeOffset>("DateJoined")
                         .HasColumnType("timestamp with time zone");
 
                     b.Property<string>("Email")
@@ -105,7 +105,7 @@ namespace LearningCenter.Migrations
                         .ValueGeneratedOnAdd()
                         .HasColumnType("uuid");
 
-                    b.Property<DateTime>("")
+                    b.Property<DateTime>("CreatedAt")
                         .HasColumnType("timestamp with time zone");
 
                     b.Property<DateTime>("ExpiresAt")
@@ -150,8 +150,7 @@ namespace LearningCenter.Migrations
 
                     b.HasKey("Id");
 
-                    b.HasIndex("UserId")
-                        .IsUnique();
+                    b.HasIndex("UserId");
 
                     b.ToTable("StudentProfiles", "lms");
                 });
@@ -181,8 +180,7 @@ namespace LearningCenter.Migrations
 
                     b.HasKey("Id");
 
-                    b.HasIndex("UserId")
-                        .IsUnique();
+                    b.HasIndex("UserId");
 
                     b.ToTable("TutorProfiles", "lms");
                 });
@@ -333,8 +331,8 @@ namespace LearningCenter.Migrations
             modelBuilder.Entity("LearningCenter.Models.Entities.StudentProfile", b =>
                 {
                     b.HasOne("LearningCenter.Models.Entities.AppUser", "User")
-                        .WithOne("StudentProfile")
-                        .HasForeignKey("LearningCenter.Models.Entities.StudentProfile", "UserId")
+                        .WithMany()
+                        .HasForeignKey("UserId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
 
@@ -344,8 +342,8 @@ namespace LearningCenter.Migrations
             modelBuilder.Entity("LearningCenter.Models.Entities.TutorProfile", b =>
                 {
                     b.HasOne("LearningCenter.Models.Entities.AppUser", "User")
-                        .WithOne("TutorProfile")
-                        .HasForeignKey("LearningCenter.Models.Entities.TutorProfile", "UserId")
+                        .WithMany()
+                        .HasForeignKey("UserId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
 
@@ -400,15 +398,6 @@ namespace LearningCenter.Migrations
                         .WithMany()
                         .HasForeignKey("UserId")
                         .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-                });
-
-            modelBuilder.Entity("LearningCenter.Models.Entities.AppUser", b =>
-                {
-                    b.Navigation("StudentProfile")
-                        .IsRequired();
-
-                    b.Navigation("TutorProfile")
                         .IsRequired();
                 });
 #pragma warning restore 612, 618

@@ -31,7 +31,7 @@ namespace LearningCenter.Models.Services
                 FirstName = u.FirstName,
                 LastName = u.LastName,
                 Email = u.Email,
-                CreatedAt = u.CreatedAt,
+                DateJoined = u.DateJoined,
                 Role = RoleConstants.Admin
             }).ToList();
 

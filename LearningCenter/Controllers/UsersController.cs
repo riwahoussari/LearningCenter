@@ -80,7 +80,7 @@ namespace LearningCenter.Controllers
                 FirstName = user.FirstName,
                 LastName = user.LastName,
                 Email = user.Email,
-                CreatedAt = user.CreatedAt,
+                DateJoined = user.DateJoined,
                 Role = role
             };
 
@@ -104,7 +104,7 @@ namespace LearningCenter.Controllers
                     FirstName = user.FirstName,
                     LastName = user.LastName,
                     Email = user.Email,
-                    CreatedAt = user.CreatedAt,
+                    DateJoined = user.DateJoined,
                     Username = user.UserName,
                     Role = RoleConstants.Admin
                 };
@@ -130,7 +130,7 @@ namespace LearningCenter.Controllers
                         FirstName = user.FirstName,
                         LastName = user.LastName,
                         Email = user.Email,
-                        CreatedAt = user.CreatedAt,
+                        DateJoined = user.DateJoined,
                         Role = RoleConstants.Tutor
                     };
                     return Ok(tutorDto);
@@ -161,7 +161,7 @@ namespace LearningCenter.Controllers
                         FirstName = user.FirstName,
                         LastName = user.LastName,
                         Email = user.Email,
-                        CreatedAt = user.CreatedAt,
+                        DateJoined = user.DateJoined,
                         Role = RoleConstants.Student
                         
                     };
@@ -172,7 +172,6 @@ namespace LearningCenter.Controllers
 
             return NotFound("User not found");
         }
-
 
 
     }
