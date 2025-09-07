@@ -1,4 +1,5 @@
 ﻿using Microsoft.AspNetCore.Identity;
+using System.ComponentModel.DataAnnotations.Schema;
 
 namespace LearningCenter.Models.Entities
 {
@@ -9,11 +10,6 @@ namespace LearningCenter.Models.Entities
         public string? FirstName { get; set; }
         public string? LastName { get; set; }
         public DateTimeOffset CreatedAt { get; set; } = DateTimeOffset.UtcNow;
-
-
-        // Profile Navigation Links
-        public StudentProfile StudentProfile { get; set; }
-        public TutorProfile TutorProfile { get; set; }
 
     }
 }

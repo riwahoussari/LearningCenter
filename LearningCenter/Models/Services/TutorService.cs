@@ -1,4 +1,6 @@
 ﻿using LearningCenter.Data;
+using LearningCenter.Models.Constants;
+using LearningCenter.Models.DTOs;
 using LearningCenter.Models.Entities;
 using Microsoft.EntityFrameworkCore;
 
@@ -9,6 +11,7 @@ namespace LearningCenter.Models.Services
         Task<TutorProfile> CreateTutorProfile(string userId, string bio, string expertise);
         Task<TutorProfile> GetTutorByUserIdAsync(string userId);
         Task ApproveTutorAsync(string tutorUserId);
+        Task<List<TutorDto>> GetAllTutors();
     }
 
     public class TutorService : ITutorService
@@ -43,7 +46,23 @@ namespace LearningCenter.Models.Services
             tutor.IsApproved = true;
             await _db.SaveChangesAsync();
         }
- 
+
+        public async Task<List<TutorDto>> GetAllTutors()
+        {
+            return await _db.TutorProfiles.Include(p => p.User).Select(p => new TutorDto
+            {
+                ProfileId = p.Id,
+                Bio = p.Bio,
+                Expertise = p.Expertise,
+                IsApproved = p.IsApproved,
+                Id = p.User.Id,
+                FirstName = p.User.FirstName,
+                LastName = p.User.LastName,
+                Email = p.User.Email,
+                CreatedAt = p.User.CreatedAt,
+                Role = RoleConstants.Tutor
+            }).ToListAsync();
+        }
     }
 
 }
